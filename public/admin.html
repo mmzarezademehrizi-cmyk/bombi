@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>پنل مالک | پیامک‌یار</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080b14;--s:#111729;--s2:#1a2240;--t:#e8ecf8;--m:#8a94b2;--c:#22d3ee;--v:#8b5cf6;--r:#f87171;--g:#34d399;--a:#fbbf24;--grad:linear-gradient(135deg,#22d3ee,#8b5cf6 60%,#ec4899);--line:rgba(255,255,255,.1)}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 90% -10%,#3b1f8e55,transparent 45%),var(--bg);color:var(--t);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.7;min-height:100vh}
+.wrap{max-width:1000px;margin:0 auto;padding:18px}
+h1{font-size:24px;font-weight:900;margin:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.card{background:var(--s);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:16px}
+input,textarea,button,select{font:inherit;border-radius:13px;border:0;padding:11px 13px}
+input,textarea{background:var(--s2);color:var(--t);width:100%;border:1px solid transparent}
+input:focus,textarea:focus{outline:0;border-color:var(--v)}
+label{display:block;color:var(--m);font-size:13px;margin-bottom:4px}
+button{background:var(--grad);color:#fff;font-weight:800;cursor:pointer}
+button.d{background:#3a1d28;color:var(--r)} button.s{background:var(--s2);color:var(--t)}
+button:disabled{opacity:.5}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:20px;padding:16px}
+.stat b{display:block;font-size:26px;font-weight:900}.stat span{color:var(--m);font-size:13px}
+.tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto}
+.tabs button{background:var(--s2);color:var(--m);white-space:nowrap}
+.tabs button.on{background:var(--grad);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+td,th{padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.07);text-align:right;white-space:nowrap}
+th{color:var(--m);font-weight:600}
+.code{font-family:monospace;direction:ltr;unicode-bidi:embed}
+.wrapx{overflow-x:auto}
+.pill{padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.ok{background:rgba(52,211,153,.15);color:var(--g)}.bad{background:rgba(248,113,113,.15);color:var(--r)}.wait{background:rgba(251,191,36,.15);color:var(--a)}
+textarea.out{height:110px;direction:ltr;margin-top:10px}
+.msg{min-height:22px;margin-top:8px;font-size:14px}
+.login{max-width:380px;margin:12vh auto}
+.hide{display:none}
+.plan-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+@media(max-width:640px){.plan-row{grid-template-columns:1fr 1fr}}
+.note{background:rgba(139,92,246,.12);border-radius:14px;padding:10px 14px;color:var(--m);font-size:13px;margin-bottom:14px}
+</style></head>
+<body>
+<div class="wrap">
+ <div id="loginBox" class="card login">
+   <h1 style="margin-bottom:6px">پنل مالک</h1>
+   <p style="color:var(--m);margin:0 0 14px">رمز مدیریت (ADMIN_TOKEN) را وارد کنید.</p>
+   <input id="tok" type="password" placeholder="ADMIN_TOKEN" autocomplete="current-password">
+   <button id="loginBtn" style="width:100%;margin-top:12px">ورود</button>
+   <div class="msg" id="loginMsg" style="color:var(--r)"></div>
+ </div>
+
+ <div id="app" class="hide">
+  <div class="top"><h1>پنل مالک پیامک‌یار</h1><div><a href="/" style="color:var(--c);margin-left:14px">مشاهده سایت</a><button class="s" id="logout">خروج</button></div></div>
+  <div class="stats" id="stats"></div>
+  <div class="tabs" id="tabs">
+    <button data-t="orders" class="on">سفارش‌ها</button><button data-t="codes">کدهای اشتراک</button><button data-t="settings">تنظیمات سایت</button>
+  </div>
+
+  <div id="t-orders" class="card"><div class="wrapx"><table><thead><tr><th>#</th><th>پلن</th><th>مبلغ (تومان)</th><th>مشتری</th><th>وضعیت</th><th>کد</th><th>تاریخ</th></tr></thead><tbody id="ordRows"></tbody></table></div></div>
+
+  <div id="t-codes" class="hide">
+    <div class="card"><h3 style="margin-top:0">ساخت کد دستی</h3>
+      <div class="note">برای فروش کارت‌به‌کارت یا هدیه: کد بسازید و برای مشتری بفرستید.</div>
+      <div class="row"><div><label>مدت (روز)</label><input id="days" type="number" value="30"></div><div><label>تعداد کد</label><input id="count" type="number" value="1"></div><div><label>حداکثر دستگاه</label><input id="maxd" type="number" value="1"></div></div>
+      <input id="note" placeholder="یادداشت (اسم خریدار)"><button id="create" style="width:100%;margin-top:10px">ساخت کد</button>
+      <textarea class="out" id="out" readonly placeholder="کدهای ساخته‌شده اینجا نمایش داده می‌شود"></textarea></div>
+    <div class="card"><div class="wrapx"><table><thead><tr><th>کد</th><th>روز</th><th>استفاده</th><th>یادداشت</th><th>وضعیت</th><th></th></tr></thead><tbody id="codeRows"></tbody></table></div></div>
+  </div>
+
+  <div id="t-settings" class="hide">
+    <div class="card"><h3 style="margin-top:0">دانلود اپ</h3>
+      <div class="note">فایل APK را در GitHub Releases آپلود کنید و لینک مستقیم دانلودش را اینجا بگذارید.</div>
+      <label>لینک دانلود APK (https)</label><input id="apkUrl" style="direction:ltr;text-align:left">
+      <div class="row" style="margin-top:12px"><div><label>شماره نسخه</label><input id="version"></div><div><label>آیدی تلگرام پشتیبانی (بدون @)</label><input id="telegram" style="direction:ltr;text-align:left"></div></div>
+      <label>توضیح تغییرات</label><textarea id="changelog" rows="2"></textarea></div>
+    <div class="card"><h3 style="margin-top:0">قیمت‌ها (تومان)</h3>
+      <div class="plan-row" style="color:var(--m);font-size:12px"><span>شناسه</span><span>عنوان</span><span>روز</span><span>قیمت</span></div>
+      <div id="plansBox"></div>
+      <div class="plan-row" style="margin-top:6px"><span></span><span></span><span></span><span></span></div>
+      <button id="saveSet" style="width:100%;margin-top:6px">ذخیره تنظیمات</button><div class="msg" id="setMsg"></div></div>
+  </div>
+ </div>
+</div>
+<script>
+var T=sessionStorage.getItem('tok')||'';
+function $(id){return document.getElementById(id)}
+function api(path,method,body){return fetch(path,{method:method||'GET',headers:{authorization:'Bearer '+T,'content-type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j}})})}
+function td(t,c){var e=document.createElement('td');e.textContent=t;if(c)e.className=c;return e}
+function pill(t,c){var td=document.createElement('td');var s=document.createElement('span');s.className='pill '+c;s.textContent=t;td.appendChild(s);return td}
+function fa(n){return Number(n).toLocaleString('fa-IR')}
+function dt(ms){return ms?new Date(ms).toLocaleString('fa-IR',{dateStyle:'short',timeStyle:'short'}):''}
+
+function stat(label,val){var d=document.createElement('div');d.className='stat';var b=document.createElement('b');b.textContent=val;var s=document.createElement('span');s.textContent=label;d.appendChild(b);d.appendChild(s);return d}
+function loadStats(){return api('/api/admin/stats').then(function(r){
+  if(r.s===401){logout();$('loginMsg').textContent='رمز نادرست است';return false}
+  var j=r.j,b=$('stats');b.innerHTML='';
+  b.appendChild(stat('فروش (تومان)',fa(j.revenue)));b.appendChild(stat('سفارش پرداخت‌شده',fa(j.paidOrders)));
+  b.appendChild(stat('اشتراک فعال الان',fa(j.activeNow)));b.appendChild(stat('کل کدها',fa(j.codes)));
+  b.appendChild(stat('دانلود',fa(j.downloads)));
+  b.appendChild(stat('درگاه پرداخت',j.shop?(j.sandbox?'آزمایشی':'فعال'):'غیرفعال'));
+  return true})}
+function loadOrders(){api('/api/admin/orders').then(function(r){var tb=$('ordRows');tb.innerHTML='';
+  r.j.orders.forEach(function(o){var tr=document.createElement('tr');
+    tr.appendChild(td(o.id));tr.appendChild(td(o.plan_title));tr.appendChild(td(fa(o.amount)));tr.appendChild(td(o.contact,'code'));
+    tr.appendChild(o.status==='paid'?pill('پرداخت‌شده','ok'):o.status==='failed'?pill('ناموفق','bad'):pill('در انتظار','wait'));
+    tr.appendChild(td(o.code||'','code'));tr.appendChild(td(dt(o.paid_at||o.created_at)));tb.appendChild(tr)})})}
+function loadCodes(){api('/api/admin/codes').then(function(r){var tb=$('codeRows');tb.innerHTML='';
+  r.j.codes.forEach(function(c){var tr=document.createElement('tr');
+    tr.appendChild(td(c.code,'code'));tr.appendChild(td(String(c.days)));tr.appendChild(td(c.used+'/'+c.max_devices));tr.appendChild(td(c.note||''));
+    tr.appendChild(c.revoked?pill('ابطال','bad'):pill('فعال','ok'));
+    var a=document.createElement('td');
+    var b1=document.createElement('button');b1.className='d';b1.textContent='ابطال';b1.onclick=function(){if(confirm('این کد ابطال شود؟'))api('/api/admin/revoke','POST',{code:c.code}).then(loadCodes)};
+    var b2=document.createElement('button');b2.className='s';b2.textContent='آزادسازی دستگاه';b2.style.marginRight='6px';b2.onclick=function(){api('/api/admin/unbind','POST',{code:c.code}).then(loadCodes)};
+    a.appendChild(b1);a.appendChild(b2);tr.appendChild(a);tb.appendChild(tr)})})}
+var plans=[];
+function drawPlans(){var box=$('plansBox');box.innerHTML='';plans.forEach(function(p,i){
+  var r=document.createElement('div');r.className='plan-row';
+  [['id','text'],['title','text'],['days','number'],['price','number']].forEach(function(f){var inp=document.createElement('input');inp.type=f[1];inp.value=p[f[0]];inp.oninput=function(){p[f[0]]=f[1]==='number'?+inp.value:inp.value};r.appendChild(inp)});
+  box.appendChild(r)})}
+function loadSettings(){api('/api/admin/settings').then(function(r){var s=r.j.settings;
+  $('apkUrl').value=s.apkUrl||'';$('version').value=s.version||'';$('telegram').value=s.telegram||'';$('changelog').value=s.changelog||'';
+  plans=r.j.plans;drawPlans()})}
+$('saveSet').onclick=function(){api('/api/admin/settings','POST',{apkUrl:$('apkUrl').value,version:$('version').value,telegram:$('telegram').value,changelog:$('changelog').value,plans:plans}).then(function(r){
+  $('setMsg').style.color=r.j.ok?'var(--g)':'var(--r)';$('setMsg').textContent=r.j.ok?'ذخیره شد ✓':(r.j.error||'خطا')})};
+$('create').onclick=function(){api('/api/admin/codes','POST',{days:+$('days').value,count:+$('count').value,maxDevices:+$('maxd').value,note:$('note').value}).then(function(r){
+  $('out').value=(r.j.codes||[r.j.error]).join('\n');loadCodes();loadStats()})};
+
+document.querySelectorAll('#tabs button').forEach(function(b){b.onclick=function(){
+  document.querySelectorAll('#tabs button').forEach(function(x){x.classList.remove('on')});b.classList.add('on');
+  ['orders','codes','settings'].forEach(function(t){$('t-'+t).classList.toggle('hide',t!==b.dataset.t)});
+  if(b.dataset.t==='orders')loadOrders();if(b.dataset.t==='codes')loadCodes();if(b.dataset.t==='settings')loadSettings()}});
+function enter(){loadStats().then(function(ok){if(!ok)return;$('loginBox').classList.add('hide');$('app').classList.remove('hide');loadOrders()})}
+function logout(){T='';sessionStorage.removeItem('tok');$('app').classList.add('hide');$('loginBox').classList.remove('hide')}
+$('logout').onclick=logout;
+$('loginBtn').onclick=function(){T=$('tok').value.trim();sessionStorage.setItem('tok',T);enter()};
+$('tok').onkeydown=function(e){if(e.key==='Enter')$('loginBtn').click()};
+if(T)enter();
+</script></body></html>

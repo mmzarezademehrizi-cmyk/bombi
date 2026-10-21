@@ -1,0 +1,15 @@
+# اسم Worker باید با اسم پروژه در Cloudflare یکی باشد
+name = "smsyar-license"
+main = "src/worker.js"
+compatibility_date = "2025-03-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "smsyar"
+# شناسه دیتابیس D1 را از داشبورد کلودفلر (Storage & Databases ← D1 ← smsyar) کپی و اینجا جایگزین کنید
+database_id = "DATABASE-ID-RA-INJA-BEGZARID"

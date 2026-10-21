@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نتیجه خرید | پیامک‌یار</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080b14;--s:#111729;--s2:#1a2240;--t:#e8ecf8;--m:#8a94b2;--g:#34d399;--r:#f87171;--a:#fbbf24;--grad:linear-gradient(135deg,#22d3ee,#8b5cf6 55%,#ec4899)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 80% 0,#2a1d6b55,transparent 50%),radial-gradient(circle at 10% 100%,#0e7490aa,transparent 45%),var(--bg);color:var(--t);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.9}
+.box{width:100%;max-width:480px;background:var(--s);border:1px solid rgba(255,255,255,.1);border-radius:32px;padding:34px 28px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.ic{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font-size:42px;margin:0 auto 14px}
+h1{font-size:26px;font-weight:900;margin:0 0 6px}p{color:var(--m);margin:6px 0}
+.code{font-family:monospace;direction:ltr;font-size:30px;font-weight:900;letter-spacing:2px;background:var(--s2);border:1px dashed #8b5cf6;border-radius:20px;padding:16px;margin:18px 0 10px;user-select:all}
+.btn{display:inline-block;border:0;cursor:pointer;font:inherit;font-weight:800;border-radius:16px;padding:13px 26px;background:var(--grad);color:#fff;text-decoration:none;margin:4px}
+.btn.g{background:rgba(255,255,255,.08)}
+ol{text-align:right;color:#c9d0e8;font-size:14.5px;margin:18px 0 6px;padding-right:22px}
+</style></head>
+<body><div class="box" id="box"><div class="ic" style="background:#1a2240">⏳</div><h1>در حال بررسی…</h1></div>
+<script>
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+var ref=new URLSearchParams(location.search).get('ref')||'';
+var box=document.getElementById('box');
+function show(icon,bg,title,sub){box.innerHTML='';var i=el('div','ic',icon);i.style.background=bg;box.appendChild(i);box.appendChild(el('h1','',title));if(sub)box.appendChild(el('p','',sub))}
+function home(){var a=el('a','btn g','بازگشت به سایت');a.href='/';box.appendChild(a)}
+fetch('/api/order?ref='+encodeURIComponent(ref)).then(function(r){return r.json()}).then(function(j){
+  if(!j.ok){show('❔','#1a2240','سفارش پیدا نشد','لینک را بررسی کنید.');home();return}
+  var o=j.order;
+  if(o.status==='paid'){
+    show('✅','rgba(52,211,153,.18)','پرداخت موفق بود','اشتراک '+o.plan_title+' ('+o.days+' روزه)');
+    box.appendChild(el('div','code',o.code));
+    var b=el('button','btn','کپی کد');b.onclick=function(){navigator.clipboard.writeText(o.code);b.textContent='کپی شد ✓'};box.appendChild(b);
+    var ol=el('ol');['اپ پیامک‌یار را باز کنید','به تب «تنظیمات» بروید','کد را در بخش «کد فعال‌سازی» وارد و «فعال‌سازی» را بزنید'].forEach(function(t){ol.appendChild(el('li','',t))});
+    box.appendChild(ol);box.appendChild(el('p','','این کد را جای امنی نگه دارید؛ برای یک گوشی معتبر است.'));
+    var a=el('a','btn g','دانلود اپ');a.href='/dl';box.appendChild(a);
+  }else if(o.status==='failed'){
+    show('❌','rgba(248,113,113,.18)','پرداخت انجام نشد','اگر مبلغ از حساب شما کسر شده، تا ۷۲ ساعت به حسابتان برمی‌گردد یا با پشتیبانی تماس بگیرید.');home();
+  }else{
+    show('⏳','rgba(251,191,36,.18)','در انتظار تأیید پرداخت','چند لحظه بعد صفحه را دوباره باز کنید.');
+    var b2=el('button','btn','بررسی دوباره');b2.onclick=function(){location.reload()};box.appendChild(b2);home();
+  }
+}).catch(function(){show('⚠️','#1a2240','ارتباط برقرار نشد','دوباره تلاش کنید.')});
+</script></body></html>

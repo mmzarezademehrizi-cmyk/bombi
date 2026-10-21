@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پیامک‌یار | پیامک بیاد، کار خودش انجام بشه</title>
+<meta name="description" content="پیامک‌یار: با رسیدن پیامک از هر شماره، خودکار تماس بگیرید، کنفرانس بسازید، پیامک بفرستید، آژیر بزنید یا به تلگرام فوروارد کنید.">
+<meta property="og:title" content="پیامک‌یار — اتوماسیون هوشمند پیامک و تماس">
+<meta property="og:description" content="پیامک بیاد، کار خودش انجام بشه.">
+<meta property="og:image" content="/icon.png">
+<meta name="theme-color" content="#080b14">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080b14;--s:#111729;--s2:#1a2240;--t:#e8ecf8;--m:#8a94b2;
+  --c:#22d3ee;--v:#8b5cf6;--p:#ec4899;--g:#34d399;--a:#fbbf24;
+  --grad:linear-gradient(135deg,#22d3ee,#8b5cf6 55%,#ec4899);
+  --line:rgba(255,255,255,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t);font-family:Vazirmatn,Tahoma,system-ui,sans-serif;line-height:1.8;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* پس‌زمینه */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.45;animation:float 18s ease-in-out infinite}
+.b1{width:520px;height:520px;background:#8b5cf6;top:-180px;right:-120px}
+.b2{width:480px;height:480px;background:#22d3ee;bottom:-200px;left:-140px;animation-delay:-6s;opacity:.3}
+.b3{width:380px;height:380px;background:#ec4899;top:45%;left:35%;animation-delay:-11s;opacity:.18}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-50px) scale(1.12)}}
+.grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse at 50% 20%,#000 20%,transparent 70%);opacity:.35}
+
+/* نوار بالا */
+nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);background:rgba(8,11,20,.65);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px}
+.logo img{width:38px;height:38px;border-radius:11px}
+.links{display:flex;gap:26px;color:var(--m);font-size:15px}
+.links a:hover{color:var(--t)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;font:inherit;font-weight:800;border-radius:16px;padding:13px 24px;transition:.25s;white-space:nowrap}
+.btn.primary{background:var(--grad);color:#fff;box-shadow:0 10px 30px rgba(139,92,246,.4)}
+.btn.primary:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(139,92,246,.55)}
+.btn.ghost{background:rgba(255,255,255,.06);color:var(--t);border:1px solid var(--line)}
+.btn.ghost:hover{background:rgba(255,255,255,.12)}
+.btn.sm{padding:9px 18px;font-size:14px;border-radius:13px}
+
+/* قهرمان */
+.hero{padding:70px 0 40px}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.badge{display:inline-flex;gap:8px;align-items:center;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:30px;padding:6px 16px;font-size:13px;color:var(--m);margin-bottom:22px}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 12px var(--g);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+h1{font-size:clamp(32px,4.6vw,56px);line-height:1.25;font-weight:900;margin-bottom:20px}
+.hero p.lead{font-size:18px;color:var(--m);max-width:540px;margin-bottom:30px}
+.cta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:34px}
+.stats{display:flex;gap:30px;flex-wrap:wrap}
+.stats b{display:block;font-size:26px;font-weight:900}
+.stats span{font-size:13px;color:var(--m)}
+
+/* گوشی */
+.phone-wrap{position:relative;display:flex;justify-content:center}
+.phone{width:290px;border-radius:44px;padding:11px;background:linear-gradient(160deg,#2a3350,#0d1224);border:1px solid rgba(255,255,255,.18);box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 6px rgba(255,255,255,.03);animation:bob 6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-14px) rotate(-1deg)}}
+.screen{border-radius:34px;background:var(--bg);padding:16px 14px 18px;min-height:600px;position:relative;overflow:hidden}
+.screen:before{content:"";position:absolute;top:-80px;right:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(#8b5cf6aa,transparent 70%)}
+.notch{width:90px;height:22px;border-radius:14px;background:#000;margin:0 auto 14px;position:relative}
+.s-title{font-weight:900;font-size:20px;position:relative}
+.s-sub{font-size:11px;color:var(--m);margin-bottom:12px;position:relative}
+.s-card{border-radius:20px;background:var(--grad);padding:14px;margin-bottom:12px;position:relative}
+.s-card b{display:flex;align-items:center;gap:8px;font-size:14px}
+.s-card b i{width:9px;height:9px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
+.s-card small{display:block;font-size:10.5px;opacity:.85;margin:4px 0 10px}
+.s-stats{display:flex;gap:6px}
+.s-stats div{flex:1;background:rgba(255,255,255,.18);border-radius:12px;text-align:center;padding:6px 2px;font-weight:900;font-size:16px}
+.s-stats div span{display:block;font-size:8.5px;font-weight:400;opacity:.85}
+.s-rule{display:flex;gap:10px;align-items:center;background:var(--s);border:1px solid var(--line);border-radius:18px;padding:10px;margin-bottom:9px;position:relative}
+.s-ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:18px;flex:none}
+.s-rule b{font-size:12.5px;display:block}
+.s-rule small{font-size:10px;color:var(--m)}
+.s-tab{position:absolute;bottom:12px;left:14px;right:14px;height:46px;border-radius:18px;background:var(--s2);border:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;font-size:17px}
+.s-tab .on{background:var(--grad);padding:5px 14px;border-radius:14px;font-size:11px;font-weight:800}
+.toast{z-index:5;position:absolute;background:rgba(17,23,41,.92);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:16px;padding:10px 14px;font-size:12.5px;display:flex;gap:9px;align-items:center;box-shadow:0 14px 40px rgba(0,0,0,.5);white-space:nowrap}
+.toast.t1{top:70px;right:-40px;animation:pop 7s infinite}
+.toast.t2{top:250px;left:-60px;animation:pop 7s 2.3s infinite}
+.toast.t3{bottom:70px;right:-50px;animation:pop 7s 4.6s infinite}
+@keyframes pop{0%,8%{opacity:0;transform:translateY(14px) scale(.92)}14%,34%{opacity:1;transform:none}42%,100%{opacity:0;transform:translateY(-10px)}}
+
+/* بخش‌ها */
+section{padding:80px 0}
+.sec-head{text-align:center;max-width:680px;margin:0 auto 50px}
+.sec-head h2{font-size:clamp(28px,4vw,42px);font-weight:900;line-height:1.4;margin-bottom:12px}
+.sec-head p{color:var(--m);font-size:17px}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.card{background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:26px;padding:26px;transition:.3s;position:relative;overflow:hidden}
+.card:hover{transform:translateY(-6px);border-color:rgba(139,92,246,.6);box-shadow:0 20px 50px rgba(139,92,246,.18)}
+.ico{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;font-size:26px;margin-bottom:16px;background:var(--grad)}
+.card h3{font-size:19px;font-weight:800;margin-bottom:6px}
+.card p{color:var(--m);font-size:14.5px}
+.tag{position:absolute;top:18px;left:18px;font-size:11px;background:rgba(251,191,36,.15);color:var(--a);padding:2px 10px;border-radius:20px;font-weight:800}
+
+/* مراحل */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;counter-reset:s}
+.step{position:relative;padding:28px;border-radius:26px;background:var(--s);border:1px solid var(--line)}
+.step:before{counter-increment:s;content:counter(s);position:absolute;top:-18px;right:24px;width:38px;height:38px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-weight:900}
+.step h3{margin:6px 0;font-size:18px}.step p{color:var(--m);font-size:14.5px}
+.flow{margin-top:44px;display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap}
+.node{padding:14px 22px;border-radius:18px;background:var(--s2);border:1px solid var(--line);font-weight:800}
+.arrow{color:var(--c);font-size:26px;animation:nudge 1.6s infinite}
+@keyframes nudge{50%{transform:translateX(-6px)}}
+
+/* قیمت */
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;align-items:stretch}
+.plan{background:var(--s);border:1px solid var(--line);border-radius:30px;padding:32px 26px;display:flex;flex-direction:column;position:relative;transition:.3s}
+.plan:hover{transform:translateY(-8px)}
+.plan.hot{background:linear-gradient(160deg,#1d1745,#111729);border-color:#8b5cf6;box-shadow:0 0 0 1px #8b5cf6,0 30px 70px rgba(139,92,246,.35)}
+.plan .ribbon{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--grad);padding:3px 18px;border-radius:20px;font-size:12.5px;font-weight:800}
+.plan h3{font-size:20px;color:var(--m);font-weight:600}
+.price{font-size:44px;font-weight:900;margin:6px 0}
+.price small{font-size:15px;color:var(--m);font-weight:400}
+.plan ul{list-style:none;margin:14px 0 24px;flex:1}
+.plan li{padding:6px 0;color:#c9d0e8;font-size:14.5px}
+.plan li:before{content:"✓";color:var(--g);font-weight:900;margin-left:8px}
+.free-note{text-align:center;color:var(--m);margin-top:26px;font-size:14.5px}
+
+/* دانلود */
+.download{border-radius:36px;padding:56px 30px;text-align:center;background:linear-gradient(135deg,rgba(34,211,238,.15),rgba(139,92,246,.2),rgba(236,72,153,.15));border:1px solid var(--line);position:relative;overflow:hidden}
+.download img{width:92px;height:92px;border-radius:26px;margin-bottom:18px;box-shadow:0 20px 50px rgba(139,92,246,.5)}
+.download h2{font-size:clamp(26px,4vw,38px);font-weight:900;margin-bottom:8px}
+.download p{color:var(--m);margin-bottom:24px}
+.steps-mini{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:26px;color:var(--m);font-size:13.5px}
+.steps-mini span{background:rgba(255,255,255,.06);padding:6px 16px;border-radius:20px}
+
+/* سوالات */
+.faq{max-width:780px;margin:0 auto}
+details{background:var(--s);border:1px solid var(--line);border-radius:20px;padding:18px 22px;margin-bottom:12px;transition:.2s}
+details[open]{border-color:#8b5cf6}
+summary{cursor:pointer;font-weight:800;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";color:var(--c);font-size:22px;line-height:1}
+details[open] summary:after{content:"–"}
+details p{color:var(--m);margin-top:10px;font-size:15px}
+
+footer{border-top:1px solid var(--line);padding:34px 0;color:var(--m);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+/* مودال خرید */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.box{background:var(--s);border:1px solid var(--line);border-radius:28px;padding:30px;width:100%;max-width:440px;animation:rise .3s}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}}
+.box h3{font-size:22px;font-weight:900;margin-bottom:4px}
+.box p{color:var(--m);font-size:14px;margin-bottom:16px}
+.box input{width:100%;background:var(--s2);border:1px solid var(--line);color:var(--t);border-radius:16px;padding:14px 16px;font:inherit;margin-bottom:14px;direction:ltr;text-align:right}
+.box input:focus{outline:2px solid var(--v)}
+.err{color:#f87171;font-size:14px;margin-bottom:10px;min-height:20px}
+.close{background:none;border:0;color:var(--m);cursor:pointer;font:inherit;margin-top:10px;width:100%}
+
+.reveal{opacity:0;transform:translateY(30px);transition:.8s}
+.reveal.in{opacity:1;transform:none}
+
+@media(max-width:860px){
+  .hero .wrap{grid-template-columns:1fr;text-align:center}
+  .hero p.lead{margin-inline:auto}.cta,.stats{justify-content:center}
+  .links{display:none}
+  .toast.t1{right:-8px}.toast.t2{left:-8px}.toast.t3{right:-8px}
+}
+</style>
+</head>
+<body>
+<div class="bg"><div class="grid"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<nav><div class="wrap">
+  <a class="logo" href="#"><img src="/icon.png" alt="">پیامک‌یار</a>
+  <div class="links"><a href="#features">قابلیت‌ها</a><a href="#how">چطور کار می‌کند</a><a href="#pricing">قیمت</a><a href="#faq">سوالات</a></div>
+  <a class="btn primary sm" href="#download">دانلود اپ</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div>
+    <div class="badge"><i></i> برای اندروید • فارسی • بدون نیاز به سرور</div>
+    <h1>پیامک بیاد،<br><span class="grad-text">کار خودش انجام بشه.</span></h1>
+    <p class="lead">پیامک‌یار با رسیدن پیامک از هر شماره، خودکار تماس می‌گیرد، تماس گروهی می‌سازد، پیامک می‌فرستد، آژیر می‌زند یا به تلگرام شما می‌فرستد. فقط یک بار قانون بنویسید.</p>
+    <div class="cta">
+      <a class="btn primary" href="/dl" id="dlBtn">⬇ دانلود رایگان</a>
+      <a class="btn ghost" href="#pricing">خرید نسخه پرو</a>
+    </div>
+    <div class="stats">
+      <div><b class="grad-text">۷ روز</b><span>پرو رایگان برای امتحان</span></div>
+      <div><b class="grad-text">۱۰۰٪</b><span>پیامک‌ها فقط روی گوشی شما</span></div>
+      <div><b class="grad-text" id="dlCount">+</b><span>دانلود</span></div>
+    </div>
+  </div>
+  <div class="phone-wrap">
+    <div class="toast t1">✅ <span>پیامک بانک ← تلگرام</span></div>
+    <div class="toast t2">📞 <span>کنفرانس ۳ نفره برقرار شد</span></div>
+    <div class="toast t3">🚨 <span>آژیر گوشی گمشده فعال شد</span></div>
+    <div class="phone"><div class="screen">
+      <div class="notch"></div>
+      <div class="s-title grad-text">پیامک‌یار</div>
+      <div class="s-sub">اتوماسیون هوشمند پیامک و تماس</div>
+      <div class="s-card"><b><i></i>محافظ فعال است</b><small>پیامک‌ها همیشه زیر نظرند</small>
+        <div class="s-stats"><div>۵<span>قانون فعال</span></div><div>۱۲<span>اجرای امروز</span></div><div>پرو<span>نسخه</span></div></div></div>
+      <div class="s-rule"><div class="s-ic" style="background:linear-gradient(135deg,#22d3ee,#8b5cf6)">👥</div><div><b>کنفرانس مدیران</b><small>0912… ← +۳ نفر</small></div></div>
+      <div class="s-rule"><div class="s-ic" style="background:linear-gradient(135deg,#38bdf8,#6366f1)">✈️</div><div><b>پیامک بانک</b><small>Bank ← ربات تلگرام</small></div></div>
+      <div class="s-rule"><div class="s-ic" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">🔔</div><div><b>گوشی گمشده</b><small>همه فرستنده‌ها ← آژیر</small></div></div>
+      <div class="s-rule"><div class="s-ic" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">💬</div><div><b>پاسخ فروشگاه</b><small>«قیمت» ← پاسخ خودکار</small></div></div>
+      <div class="s-tab"><span class="on">⚡ قوانین</span><span>🧾</span><span>⚙️</span></div>
+    </div></div>
+  </div>
+</div></header>
+
+<section id="features"><div class="wrap">
+  <div class="sec-head reveal"><h2>هرچه با <span class="grad-text">پیامک</span> می‌شود کرد، خودکار</h2><p>یک اپ، ده‌ها کاربرد؛ از تماس گروهی تا هشدار سرور.</p></div>
+  <div class="features">
+    <div class="card reveal"><div class="ico">👥</div><h3>کنفرانس خودکار</h3><p>شماره اول را می‌گیرد، در انتظار می‌گذارد، نفر بعدی را می‌گیرد و وقتی جواب داد تماس‌ها را خودکار ادغام می‌کند.</p></div>
+    <div class="card reveal"><div class="ico">📞</div><h3>تماس خودکار</h3><p>پیامک از شماره مشخص آمد؟ همان لحظه به هر شماره‌ای که خواستید زنگ می‌زند.</p></div>
+    <div class="card reveal"><div class="ico">💬</div><h3>پیامک گروهی و پاسخ خودکار</h3><p>به چندین شماره یا مستقیم به فرستنده جواب بدهید؛ با متغیرهای {sender}، {time}، {code}.</p></div>
+    <div class="card reveal"><div class="ico">✈️</div><h3>فوروارد به تلگرام و وب‌هوک</h3><p>پیامک‌های بانک و کد تأیید را به ربات تلگرام یا سرور خودتان بفرستید.</p></div>
+    <div class="card reveal"><div class="ico">🚨</div><h3>آژیر گوشی گمشده</h3><p>با یک پیامک رمز، گوشی حتی روی سکوت با صدای بلند زنگ می‌خورد تا پیدایش کنید.</p></div>
+    <div class="card reveal"><span class="tag">پرو</span><div class="ico">⏰</div><h3>ساعت و روز فعال</h3><p>قانون فقط شب‌ها یا روزهای کاری اجرا شود؛ بقیه وقت‌ها مزاحمتان نشود.</p></div>
+    <div class="card reveal"><div class="ico">✨</div><h3>قالب‌های آماده</h3><p>با یک لمس قانون آماده بسازید و فقط جاهای خالی را پر کنید.</p></div>
+    <div class="card reveal"><div class="ico">🔒</div><h3>حریم خصوصی کامل</h3><p>پیامک‌ها هرگز از گوشی بیرون نمی‌روند، مگر خودتان تلگرام یا وب‌هوک بخواهید.</p></div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <div class="sec-head reveal"><h2>سه قدم تا اتوماسیون</h2><p>بدون کدنویسی، فقط چند لمس.</p></div>
+  <div class="steps">
+    <div class="step reveal"><h3>فرستنده را مشخص کنید</h3><p>شماره، شماره کوتاه، نام حرفی بانک یا * برای همه. می‌توانید کلمه خاصی هم شرط بگذارید.</p></div>
+    <div class="step reveal"><h3>عمل را انتخاب کنید</h3><p>تماس، کنفرانس، پیامک، آژیر، تلگرام یا وب‌هوک؛ شماره‌ها را از مخاطبین بردارید.</p></div>
+    <div class="step reveal"><h3>روشن کنید و راحت باشید</h3><p>اپ در پس‌زمینه می‌ماند و هر پیامک را بررسی می‌کند؛ گزارش همه چیز را می‌بینید.</p></div>
+  </div>
+  <div class="flow reveal"><div class="node">📩 پیامک ورودی</div><span class="arrow">◀</span><div class="node">🧠 قانون شما</div><span class="arrow">◀</span><div class="node">📞 تماس • 💬 پیامک • 🚨 آژیر • ✈️ تلگرام</div></div>
+</div></section>
+
+<section id="pricing"><div class="wrap">
+  <div class="sec-head reveal"><h2>نسخه <span class="grad-text">پرو</span></h2><p>۷ روز اول همه امکانات رایگان است. بعد از آن، نسخه رایگان ۲ قانون فعال دارد.</p></div>
+  <div class="pricing" id="plans"></div>
+  <p class="free-note">پرداخت امن با درگاه زرین‌پال • کد اشتراک بلافاصله بعد از پرداخت نمایش داده می‌شود</p>
+</div></section>
+
+<section id="download"><div class="wrap">
+  <div class="download reveal">
+    <img src="/icon.png" alt="پیامک‌یار">
+    <h2>همین حالا نصب کنید</h2>
+    <p id="verText">نسخه اندروید • رایگان برای شروع</p>
+    <a class="btn primary" href="/dl" style="font-size:18px;padding:16px 38px">⬇ دانلود APK</a>
+    <div class="steps-mini"><span>۱. فایل را دانلود کنید</span><span>۲. نصب از منبع ناشناس را مجاز کنید</span><span>۳. مجوز پیامک را بدهید</span></div>
+    <p id="tgSupport" style="margin-top:22px;margin-bottom:0"></p>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <div class="sec-head reveal"><h2>سوالات پرتکرار</h2></div>
+  <div class="faq">
+    <details class="reveal"><summary>پیامک‌های من جایی ارسال می‌شود؟</summary><p>خیر. همه‌چیز روی گوشی شما اجرا می‌شود. فقط اگر خودتان قانون «تلگرام» یا «وب‌هوک» بسازید، همان پیامک به همان مقصد می‌رود.</p></details>
+    <details class="reveal"><summary>چرا موقع دادن مجوز پیامک پیام «Restricted» می‌دهد؟</summary><p>اندروید ۱۳ به بعد برای برنامه‌هایی که خارج از فروشگاه نصب می‌شوند مجوز پیامک را قفل می‌کند. در تنظیمات برنامه، از منوی سه‌نقطه «Allow restricted settings» را بزنید. راهنمای کامل داخل اپ هم هست.</p></details>
+    <details class="reveal"><summary>کنفرانس خودکار چطور کار می‌کند؟</summary><p>اندروید فقط به «برنامه تماس پیش‌فرض» اجازه ادغام تماس‌ها را می‌دهد. با یک لمس در اپ، پیامک‌یار را برنامه تماس پیش‌فرض کنید؛ هر وقت خواستید برنامه قبلی را برمی‌گردانید. اپراتور شما هم باید تماس سه‌نفره را پشتیبانی کند و معمولاً سقف ۵ نفر است.</p></details>
+    <details class="reveal"><summary>در گوشی‌های شیائومی کار می‌کند؟</summary><p>بله؛ فقط «شروع خودکار»، «بدون محدودیت باتری» و «نمایش پنجره در پس‌زمینه» را روشن کنید. اپ کارت راهنما و میان‌بر آن‌ها را دارد.</p></details>
+    <details class="reveal"><summary>اشتراک روی چند گوشی کار می‌کند؟</summary><p>هر کد برای یک گوشی است. اگر گوشی عوض کردید با پشتیبانی تماس بگیرید تا کد آزاد شود.</p></details>
+  </div>
+</div></section>
+
+<footer><div class="wrap"><div>© پیامک‌یار — ساخته‌شده با ❤ برای ایرانی‌ها</div><div id="footTg"></div></div></footer>
+
+<div class="modal" id="modal"><div class="box">
+  <h3 id="mTitle">خرید اشتراک</h3><p id="mSub">ایمیل یا شماره موبایل خود را وارد کنید تا کد اشتراک برایتان صادر شود.</p>
+  <input id="mContact" placeholder="09123456789 یا name@email.com" autocomplete="off">
+  <div class="err" id="mErr"></div>
+  <button class="btn primary" style="width:100%" id="mPay">پرداخت و دریافت کد</button>
+  <button class="close" onclick="closeModal()">انصراف</button>
+</div></div>
+
+<script>
+var INFO=null, chosen=null;
+function fa(n){return Number(n).toLocaleString('fa-IR')}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+function render(){
+  var box=document.getElementById('plans');box.innerHTML='';
+  var mid=INFO.plans.length>2?1:-1;
+  INFO.plans.forEach(function(p,i){
+    var d=el('div','plan reveal in'+(i===mid?' hot':''));
+    if(p.badge)d.appendChild(el('div','ribbon',p.badge));
+    d.appendChild(el('h3','',p.title));
+    var pr=el('div','price',fa(p.price));var u=el('small','',' تومان');pr.appendChild(u);d.appendChild(pr);
+    var ul=el('ul');
+    ['همه قانون‌ها نامحدود','کنفرانس و پیامک گروهی','ساعت و روز فعال','فوروارد به تلگرام و وب‌هوک','آژیر و قالب‌های آماده','اعتبار '+fa(p.days)+' روز'].forEach(function(t){ul.appendChild(el('li','',t))});
+    d.appendChild(ul);
+    var b=el('button','btn '+(i===mid?'primary':'ghost'),'خرید '+p.title);
+    b.onclick=function(){buy(p)};d.appendChild(b);box.appendChild(d);
+  });
+  document.getElementById('dlCount').textContent=INFO.downloads>0?fa(INFO.downloads)+'+':'جدید';
+  if(INFO.version)document.getElementById('verText').textContent='نسخه '+INFO.version+' • اندروید • رایگان برای شروع';
+  if(INFO.telegram){
+    var a='<a href="https://t.me/'+INFO.telegram+'" style="color:#22d3ee;font-weight:800">پشتیبانی تلگرام: @'+INFO.telegram+'</a>';
+    document.getElementById('tgSupport').innerHTML=a;document.getElementById('footTg').innerHTML=a;
+  }
+}
+function buy(p){
+  chosen=p;
+  if(!INFO.shop){
+    if(INFO.telegram){location.href='https://t.me/'+INFO.telegram+'?text='+encodeURIComponent('سلام، می‌خواهم اشتراک '+p.title+' پیامک‌یار را بخرم')}
+    else alert('پرداخت آنلاین هنوز فعال نشده است.');
+    return;
+  }
+  document.getElementById('mTitle').textContent='خرید اشتراک '+p.title+' — '+fa(p.price)+' تومان';
+  document.getElementById('mErr').textContent='';document.getElementById('modal').classList.add('on');
+}
+function closeModal(){document.getElementById('modal').classList.remove('on')}
+document.getElementById('mPay').onclick=function(){
+  var c=document.getElementById('mContact').value.trim(),err=document.getElementById('mErr'),btn=this;
+  if(c.length<5){err.textContent='ایمیل یا شماره موبایل را وارد کنید';return}
+  btn.disabled=true;btn.textContent='در حال اتصال به درگاه…';err.textContent='';
+  fetch('/api/pay/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({plan:chosen.id,contact:c})})
+   .then(function(r){return r.json()}).then(function(j){
+     if(j.ok){location.href=j.url}else{err.textContent=j.error||'خطا';btn.disabled=false;btn.textContent='پرداخت و دریافت کد'}
+   }).catch(function(){err.textContent='ارتباط برقرار نشد';btn.disabled=false;btn.textContent='پرداخت و دریافت کد'});
+};
+fetch('/api/public').then(function(r){return r.json()}).then(function(j){INFO=j;render()}).catch(function(){
+  INFO={plans:[],downloads:0,shop:false};render();
+});
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(function(x){io.observe(x)});
+</script>
+</body>
+</html>
