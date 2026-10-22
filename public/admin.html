@@ -42,6 +42,10 @@ textarea.out{height:110px;direction:ltr;margin-top:10px}
 .plan-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px}
 @media(max-width:640px){.plan-row{grid-template-columns:1fr 1fr}}
 .note{background:rgba(139,92,246,.12);border-radius:14px;padding:10px 14px;color:var(--m);font-size:13px;margin-bottom:14px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal.on{display:flex}.modal .inner{background:var(--s);border-radius:22px;padding:14px;max-width:560px;width:100%;text-align:center}
+.modal img{max-width:100%;max-height:70vh;border-radius:12px}
+.act button{padding:6px 12px;font-size:13px;margin-left:4px}
 </style></head>
 <body>
 <div class="wrap">
@@ -57,14 +61,14 @@ textarea.out{height:110px;direction:ltr;margin-top:10px}
   <div class="top"><h1>پنل مالک پیامک‌یار</h1><div><a href="/" style="color:var(--c);margin-left:14px">مشاهده سایت</a><button class="s" id="logout">خروج</button></div></div>
   <div class="stats" id="stats"></div>
   <div class="tabs" id="tabs">
-    <button data-t="orders" class="on">سفارش‌ها</button><button data-t="codes">کدهای اشتراک</button><button data-t="settings">تنظیمات سایت</button>
+    <button data-t="orders" class="on">رسیدها و فروش</button><button data-t="codes">کدهای اشتراک</button><button data-t="settings">تنظیمات سایت</button>
   </div>
 
-  <div id="t-orders" class="card"><div class="wrapx"><table><thead><tr><th>#</th><th>پلن</th><th>مبلغ (تومان)</th><th>مشتری</th><th>وضعیت</th><th>کد</th><th>تاریخ</th></tr></thead><tbody id="ordRows"></tbody></table></div></div>
+  <div id="t-orders" class="card"><div class="wrapx"><table><thead><tr><th>#</th><th>پلن</th><th>مبلغ (تومان)</th><th>مشتری</th><th>پیگیری</th><th>رسید</th><th>وضعیت</th><th>عملیات</th><th>تاریخ</th></tr></thead><tbody id="ordRows"></tbody></table></div></div>
 
   <div id="t-codes" class="hide">
     <div class="card"><h3 style="margin-top:0">ساخت کد دستی</h3>
-      <div class="note">برای فروش کارت‌به‌کارت یا هدیه: کد بسازید و برای مشتری بفرستید.</div>
+      <div class="note">برای هدیه یا فروش خارج از سایت: کد بسازید و برای مشتری بفرستید.</div>
       <div class="row"><div><label>مدت (روز)</label><input id="days" type="number" value="30"></div><div><label>تعداد کد</label><input id="count" type="number" value="1"></div><div><label>حداکثر دستگاه</label><input id="maxd" type="number" value="1"></div></div>
       <input id="note" placeholder="یادداشت (اسم خریدار)"><button id="create" style="width:100%;margin-top:10px">ساخت کد</button>
       <textarea class="out" id="out" readonly placeholder="کدهای ساخته‌شده اینجا نمایش داده می‌شود"></textarea></div>
@@ -77,6 +81,10 @@ textarea.out{height:110px;direction:ltr;margin-top:10px}
       <label>لینک دانلود APK (https)</label><input id="apkUrl" style="direction:ltr;text-align:left">
       <div class="row" style="margin-top:12px"><div><label>شماره نسخه</label><input id="version"></div><div><label>آیدی تلگرام پشتیبانی (بدون @)</label><input id="telegram" style="direction:ltr;text-align:left"></div></div>
       <label>توضیح تغییرات</label><textarea id="changelog" rows="2"></textarea></div>
+    <div class="card"><h3 style="margin-top:0">اطلاعات پرداخت کارت‌به‌کارت</h3>
+      <div class="note">این اطلاعات در پنجره خرید سایت نمایش داده می‌شود. اگر شماره کارت خالی باشد، خرید آنلاین غیرفعال و دکمه‌ها به تلگرام می‌روند.</div>
+      <div class="row"><div><label>شماره کارت</label><input id="cardNumber" style="direction:ltr;text-align:left" placeholder="6037-xxxx-xxxx-xxxx"></div><div><label>به نام</label><input id="cardOwner"></div><div><label>بانک</label><input id="bank"></div></div>
+      <label>توضیح برای خریدار (اختیاری)</label><input id="payNote" placeholder="مثلاً: رسید را حتماً بفرستید؛ بررسی تا چند ساعت"></div>
     <div class="card"><h3 style="margin-top:0">قیمت‌ها (تومان)</h3>
       <div class="plan-row" style="color:var(--m);font-size:12px"><span>شناسه</span><span>عنوان</span><span>روز</span><span>قیمت</span></div>
       <div id="plansBox"></div>
@@ -85,6 +93,7 @@ textarea.out{height:110px;direction:ltr;margin-top:10px}
   </div>
  </div>
 </div>
+<div class="modal" id="rmodal"><div class="inner"><img id="rimg" alt=""><div style="margin-top:10px"><button class="s" onclick="document.getElementById('rmodal').classList.remove('on')">بستن</button></div></div></div>
 <script>
 var T=sessionStorage.getItem('tok')||'';
 function $(id){return document.getElementById(id)}
@@ -98,16 +107,23 @@ function stat(label,val){var d=document.createElement('div');d.className='stat';
 function loadStats(){return api('/api/admin/stats').then(function(r){
   if(r.s===401){logout();$('loginMsg').textContent='رمز نادرست است';return false}
   var j=r.j,b=$('stats');b.innerHTML='';
-  b.appendChild(stat('فروش (تومان)',fa(j.revenue)));b.appendChild(stat('سفارش پرداخت‌شده',fa(j.paidOrders)));
-  b.appendChild(stat('اشتراک فعال الان',fa(j.activeNow)));b.appendChild(stat('کل کدها',fa(j.codes)));
-  b.appendChild(stat('دانلود',fa(j.downloads)));
-  b.appendChild(stat('درگاه پرداخت',j.shop?(j.sandbox?'آزمایشی':'فعال'):'غیرفعال'));
+  b.appendChild(stat('فروش تأییدشده (تومان)',fa(j.revenue)));b.appendChild(stat('رسید در انتظار بررسی',fa(j.pending)));
+  b.appendChild(stat('سفارش تأییدشده',fa(j.approved)));b.appendChild(stat('اشتراک فعال الان',fa(j.activeNow)));
+  b.appendChild(stat('کل کدها',fa(j.codes)));b.appendChild(stat('دانلود',fa(j.downloads)));
   return true})}
-function loadOrders(){api('/api/admin/orders').then(function(r){var tb=$('ordRows');tb.innerHTML='';
-  r.j.orders.forEach(function(o){var tr=document.createElement('tr');
-    tr.appendChild(td(o.id));tr.appendChild(td(o.plan_title));tr.appendChild(td(fa(o.amount)));tr.appendChild(td(o.contact,'code'));
-    tr.appendChild(o.status==='paid'?pill('پرداخت‌شده','ok'):o.status==='failed'?pill('ناموفق','bad'):pill('در انتظار','wait'));
-    tr.appendChild(td(o.code||'','code'));tr.appendChild(td(dt(o.paid_at||o.created_at)));tb.appendChild(tr)})})}
+function showReceipt(id){api('/api/admin/receipt?id='+id).then(function(r){if(r.j.ok){$('rimg').src=r.j.data;$('rmodal').classList.add('on')}else alert('رسیدی ثبت نشده')})}
+function loadOrders(){api('/api/admin/payments').then(function(r){var tb=$('ordRows');tb.innerHTML='';
+  r.j.payments.forEach(function(o){var tr=document.createElement('tr');
+    tr.appendChild(td(o.id));tr.appendChild(td(o.plan_title));tr.appendChild(td(fa(o.amount)));tr.appendChild(td(o.contact,'code'));tr.appendChild(td(o.track||'','code'));
+    var rc=document.createElement('td');if(o.has_receipt){var vb=document.createElement('button');vb.className='s';vb.textContent='مشاهده';vb.onclick=function(){showReceipt(o.id)};rc.appendChild(vb)}tr.appendChild(rc);
+    tr.appendChild(o.status==='approved'?pill('تأییدشده','ok'):o.status==='rejected'?pill('ردشده','bad'):pill('در انتظار','wait'));
+    var ac=document.createElement('td');ac.className='act';
+    if(o.status==='review'){
+      var ba=document.createElement('button');ba.textContent='تأیید و صدور کد';ba.onclick=function(){if(!confirm('رسید تأیید و کد صادر شود؟'))return;api('/api/admin/pay/approve','POST',{id:o.id}).then(function(x){if(x.j.ok){prompt('کد اشتراک (برای مشتری هم در سایت نمایش داده می‌شود):',x.j.code)}else alert(x.j.error);loadOrders();loadStats()})};
+      var br=document.createElement('button');br.className='d';br.textContent='رد';br.onclick=function(){var n=prompt('دلیل رد (به مشتری نمایش داده می‌شود):','رسید خوانا نیست یا مبلغ مطابقت ندارد');if(n===null)return;api('/api/admin/pay/reject','POST',{id:o.id,note:n}).then(function(){loadOrders();loadStats()})};
+      ac.appendChild(ba);ac.appendChild(br);
+    }else if(o.code){ac.textContent=o.code;ac.className='code'}
+    tr.appendChild(ac);tr.appendChild(td(dt(o.decided_at||o.created_at)));tb.appendChild(tr)})})}
 function loadCodes(){api('/api/admin/codes').then(function(r){var tb=$('codeRows');tb.innerHTML='';
   r.j.codes.forEach(function(c){var tr=document.createElement('tr');
     tr.appendChild(td(c.code,'code'));tr.appendChild(td(String(c.days)));tr.appendChild(td(c.used+'/'+c.max_devices));tr.appendChild(td(c.note||''));
@@ -122,9 +138,9 @@ function drawPlans(){var box=$('plansBox');box.innerHTML='';plans.forEach(functi
   [['id','text'],['title','text'],['days','number'],['price','number']].forEach(function(f){var inp=document.createElement('input');inp.type=f[1];inp.value=p[f[0]];inp.oninput=function(){p[f[0]]=f[1]==='number'?+inp.value:inp.value};r.appendChild(inp)});
   box.appendChild(r)})}
 function loadSettings(){api('/api/admin/settings').then(function(r){var s=r.j.settings;
-  $('apkUrl').value=s.apkUrl||'';$('version').value=s.version||'';$('telegram').value=s.telegram||'';$('changelog').value=s.changelog||'';
+  $('cardNumber').value=s.cardNumber||'';$('cardOwner').value=s.cardOwner||'';$('bank').value=s.bank||'';$('payNote').value=s.payNote||'';$('apkUrl').value=s.apkUrl||'';$('version').value=s.version||'';$('telegram').value=s.telegram||'';$('changelog').value=s.changelog||'';
   plans=r.j.plans;drawPlans()})}
-$('saveSet').onclick=function(){api('/api/admin/settings','POST',{apkUrl:$('apkUrl').value,version:$('version').value,telegram:$('telegram').value,changelog:$('changelog').value,plans:plans}).then(function(r){
+$('saveSet').onclick=function(){api('/api/admin/settings','POST',{cardNumber:$('cardNumber').value,cardOwner:$('cardOwner').value,bank:$('bank').value,payNote:$('payNote').value,apkUrl:$('apkUrl').value,version:$('version').value,telegram:$('telegram').value,changelog:$('changelog').value,plans:plans}).then(function(r){
   $('setMsg').style.color=r.j.ok?'var(--g)':'var(--r)';$('setMsg').textContent=r.j.ok?'ذخیره شد ✓':(r.j.error||'خطا')})};
 $('create').onclick=function(){api('/api/admin/codes','POST',{days:+$('days').value,count:+$('count').value,maxDevices:+$('maxd').value,note:$('note').value}).then(function(r){
   $('out').value=(r.j.codes||[r.j.error]).join('\n');loadCodes();loadStats()})};

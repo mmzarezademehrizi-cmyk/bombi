@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>نتیجه خرید | پیامک‌یار</title>
+<title>وضعیت سفارش | پیامک‌یار</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;800;900&display=swap" rel="stylesheet">
 <style>
@@ -24,21 +24,25 @@ var ref=new URLSearchParams(location.search).get('ref')||'';
 var box=document.getElementById('box');
 function show(icon,bg,title,sub){box.innerHTML='';var i=el('div','ic',icon);i.style.background=bg;box.appendChild(i);box.appendChild(el('h1','',title));if(sub)box.appendChild(el('p','',sub))}
 function home(){var a=el('a','btn g','بازگشت به سایت');a.href='/';box.appendChild(a)}
+function poll(){
 fetch('/api/order?ref='+encodeURIComponent(ref)).then(function(r){return r.json()}).then(function(j){
   if(!j.ok){show('❔','#1a2240','سفارش پیدا نشد','لینک را بررسی کنید.');home();return}
   var o=j.order;
-  if(o.status==='paid'){
-    show('✅','rgba(52,211,153,.18)','پرداخت موفق بود','اشتراک '+o.plan_title+' ('+o.days+' روزه)');
+  if(o.status==='approved'){
+    show('✅','rgba(52,211,153,.18)','رسید شما تأیید شد','اشتراک '+o.plan_title+' ('+o.days+' روزه)');
     box.appendChild(el('div','code',o.code));
     var b=el('button','btn','کپی کد');b.onclick=function(){navigator.clipboard.writeText(o.code);b.textContent='کپی شد ✓'};box.appendChild(b);
     var ol=el('ol');['اپ پیامک‌یار را باز کنید','به تب «تنظیمات» بروید','کد را در بخش «کد فعال‌سازی» وارد و «فعال‌سازی» را بزنید'].forEach(function(t){ol.appendChild(el('li','',t))});
-    box.appendChild(ol);box.appendChild(el('p','','این کد را جای امنی نگه دارید؛ برای یک گوشی معتبر است.'));
+    box.appendChild(ol);box.appendChild(el('p','','این کد را جای امنی نگه دارید؛ برای یک گوشی معتبر است. همین صفحه را هم بوکمارک کنید.'));
     var a=el('a','btn g','دانلود اپ');a.href='/dl';box.appendChild(a);
-  }else if(o.status==='failed'){
-    show('❌','rgba(248,113,113,.18)','پرداخت انجام نشد','اگر مبلغ از حساب شما کسر شده، تا ۷۲ ساعت به حسابتان برمی‌گردد یا با پشتیبانی تماس بگیرید.');home();
+  }else if(o.status==='rejected'){
+    show('❌','rgba(248,113,113,.18)','رسید تأیید نشد',o.note||'لطفاً با پشتیبانی تماس بگیرید یا دوباره رسید بفرستید.');home();
   }else{
-    show('⏳','rgba(251,191,36,.18)','در انتظار تأیید پرداخت','چند لحظه بعد صفحه را دوباره باز کنید.');
-    var b2=el('button','btn','بررسی دوباره');b2.onclick=function(){location.reload()};box.appendChild(b2);home();
+    show('⏳','rgba(251,191,36,.18)','رسید شما دریافت شد','در حال بررسی توسط ما هستیم. بعد از تأیید، کد اشتراک همین‌جا نمایش داده می‌شود.');
+    box.appendChild(el('p','','این صفحه خودکار به‌روز می‌شود. می‌توانید آن را بوکمارک کنید و بعداً برگردید.'));
+    home();setTimeout(poll,15000);
   }
 }).catch(function(){show('⚠️','#1a2240','ارتباط برقرار نشد','دوباره تلاش کنید.')});
+}
+poll();
 </script></body></html>

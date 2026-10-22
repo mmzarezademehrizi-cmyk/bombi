@@ -157,6 +157,14 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 .box p{color:var(--m);font-size:14px;margin-bottom:16px}
 .box input{width:100%;background:var(--s2);border:1px solid var(--line);color:var(--t);border-radius:16px;padding:14px 16px;font:inherit;margin-bottom:14px;direction:ltr;text-align:right}
 .box input:focus{outline:2px solid var(--v)}
+.pay{background:var(--s2);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:14px}
+.pay-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:14px}
+.pay-row span{color:var(--m);min-width:70px}.pay-row b{flex:1}
+.ltr{direction:ltr;text-align:left;font-size:15px;letter-spacing:.5px;white-space:nowrap}
+.copy{border:0;background:var(--grad);color:#fff;border-radius:10px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer}
+.pay-note{color:var(--a);font-size:13px;margin-top:4px}
+.file{display:block;border:1.5px dashed var(--v);border-radius:16px;padding:14px;text-align:center;color:var(--m);cursor:pointer;margin-bottom:14px}
+.file img{display:none;max-width:100%;max-height:160px;margin:10px auto 0;border-radius:10px}
 .err{color:#f87171;font-size:14px;margin-bottom:10px;min-height:20px}
 .close{background:none;border:0;color:var(--m);cursor:pointer;font:inherit;margin-top:10px;width:100%}
 
@@ -241,7 +249,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <section id="pricing"><div class="wrap">
   <div class="sec-head reveal"><h2>نسخه <span class="grad-text">پرو</span></h2><p>۷ روز اول همه امکانات رایگان است. بعد از آن، نسخه رایگان ۲ قانون فعال دارد.</p></div>
   <div class="pricing" id="plans"></div>
-  <p class="free-note">پرداخت امن با درگاه زرین‌پال • کد اشتراک بلافاصله بعد از پرداخت نمایش داده می‌شود</p>
+  <p class="free-note">پرداخت کارت‌به‌کارت با ارسال رسید • بعد از تأیید، کد اشتراک در همین سایت نمایش داده می‌شود</p>
 </div></section>
 
 <section id="download"><div class="wrap">
@@ -269,10 +277,20 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 <footer><div class="wrap"><div>© پیامک‌یار — ساخته‌شده با ❤ برای ایرانی‌ها</div><div id="footTg"></div></div></footer>
 
 <div class="modal" id="modal"><div class="box">
-  <h3 id="mTitle">خرید اشتراک</h3><p id="mSub">ایمیل یا شماره موبایل خود را وارد کنید تا کد اشتراک برایتان صادر شود.</p>
-  <input id="mContact" placeholder="09123456789 یا name@email.com" autocomplete="off">
+  <h3 id="mTitle">خرید اشتراک</h3>
+  <p id="mSub">مبلغ را کارت‌به‌کارت کنید و رسید را همین‌جا بفرستید.</p>
+  <div class="pay">
+    <div class="pay-row"><span>شماره کارت</span><b class="ltr" id="mCard"></b><button type="button" class="copy" id="mCopy">کپی</button></div>
+    <div class="pay-row"><span>به نام</span><b id="mOwner"></b></div>
+    <div class="pay-row"><span>مبلغ</span><b id="mAmount"></b></div>
+    <div class="pay-note" id="mNote"></div>
+  </div>
+  <input id="mContact" placeholder="ایمیل یا شماره موبایل شما" autocomplete="off">
+  <input id="mTrack" placeholder="شماره پیگیری (اختیاری)" autocomplete="off">
+  <label class="file" for="mFile"><span id="mFileTxt">📎 انتخاب عکس رسید</span><img id="mPrev" alt=""></label>
+  <input id="mFile" type="file" accept="image/*" style="display:none">
   <div class="err" id="mErr"></div>
-  <button class="btn primary" style="width:100%" id="mPay">پرداخت و دریافت کد</button>
+  <button class="btn primary" style="width:100%" id="mPay">ارسال رسید</button>
   <button class="close" onclick="closeModal()">انصراف</button>
 </div></div>
 
@@ -301,25 +319,49 @@ function render(){
     document.getElementById('tgSupport').innerHTML=a;document.getElementById('footTg').innerHTML=a;
   }
 }
+var receipt='';
 function buy(p){
   chosen=p;
-  if(!INFO.shop){
+  if(!INFO.pay){
     if(INFO.telegram){location.href='https://t.me/'+INFO.telegram+'?text='+encodeURIComponent('سلام، می‌خواهم اشتراک '+p.title+' پیامک‌یار را بخرم')}
-    else alert('پرداخت آنلاین هنوز فعال نشده است.');
+    else alert('خرید آنلاین هنوز فعال نشده است.');
     return;
   }
-  document.getElementById('mTitle').textContent='خرید اشتراک '+p.title+' — '+fa(p.price)+' تومان';
+  receipt='';document.getElementById('mFileTxt').textContent='📎 انتخاب عکس رسید';document.getElementById('mPrev').style.display='none';
+  document.getElementById('mTitle').textContent='خرید اشتراک '+p.title;
+  document.getElementById('mCard').textContent=INFO.card.number;
+  document.getElementById('mOwner').textContent=(INFO.card.owner||'')+(INFO.card.bank?' ('+INFO.card.bank+')':'');
+  document.getElementById('mAmount').textContent=fa(p.price)+' تومان';
+  document.getElementById('mNote').textContent=INFO.card.note||'';
   document.getElementById('mErr').textContent='';document.getElementById('modal').classList.add('on');
 }
 function closeModal(){document.getElementById('modal').classList.remove('on')}
+document.getElementById('mCopy').onclick=function(){
+  var t=INFO.card.number.replace(/[^0-9]/g,'');
+  if(navigator.clipboard)navigator.clipboard.writeText(t);this.textContent='کپی شد ✓';var b=this;setTimeout(function(){b.textContent='کپی'},1500);
+};
+document.getElementById('mFile').onchange=function(){
+  var f=this.files[0];if(!f)return;
+  var img=new Image(),rd=new FileReader();
+  rd.onload=function(){img.onload=function(){
+    var max=1100,w=img.width,h=img.height,k=Math.min(1,max/Math.max(w,h));
+    var c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    receipt=c.toDataURL('image/jpeg',0.72);
+    var pv=document.getElementById('mPrev');pv.src=receipt;pv.style.display='block';
+    document.getElementById('mFileTxt').textContent='✓ عکس انتخاب شد (برای تغییر دوباره بزنید)';
+  };img.src=rd.result};
+  rd.readAsDataURL(f);
+};
 document.getElementById('mPay').onclick=function(){
-  var c=document.getElementById('mContact').value.trim(),err=document.getElementById('mErr'),btn=this;
+  var c=document.getElementById('mContact').value.trim(),t=document.getElementById('mTrack').value.trim(),err=document.getElementById('mErr'),btn=this;
   if(c.length<5){err.textContent='ایمیل یا شماره موبایل را وارد کنید';return}
-  btn.disabled=true;btn.textContent='در حال اتصال به درگاه…';err.textContent='';
-  fetch('/api/pay/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({plan:chosen.id,contact:c})})
+  if(!receipt&&t.length<4){err.textContent='عکس رسید یا شماره پیگیری را وارد کنید';return}
+  btn.disabled=true;btn.textContent='در حال ارسال…';err.textContent='';
+  fetch('/api/order/new',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({plan:chosen.id,contact:c,track:t,receipt:receipt})})
    .then(function(r){return r.json()}).then(function(j){
-     if(j.ok){location.href=j.url}else{err.textContent=j.error||'خطا';btn.disabled=false;btn.textContent='پرداخت و دریافت کد'}
-   }).catch(function(){err.textContent='ارتباط برقرار نشد';btn.disabled=false;btn.textContent='پرداخت و دریافت کد'});
+     if(j.ok){location.href='/result.html?ref='+encodeURIComponent(j.ref)}else{err.textContent=j.error||'خطا';btn.disabled=false;btn.textContent='ارسال رسید'}
+   }).catch(function(){err.textContent='ارتباط برقرار نشد';btn.disabled=false;btn.textContent='ارسال رسید'});
 };
 fetch('/api/public').then(function(r){return r.json()}).then(function(j){INFO=j;render()}).catch(function(){
   INFO={plans:[],downloads:0,shop:false};render();

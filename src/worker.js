@@ -1,5 +1,5 @@
 // ============================================================
-//  پیامک‌یار — سایت + فروشگاه + سرور اشتراک (Cloudflare Worker + D1)
+//  پیامک‌یار — سایت + فروشگاه (پرداخت با رسید) + سرور اشتراک (Cloudflare Worker + D1)
 //  فایل‌های سایت داخل پوشه public هستند (binding: ASSETS)
 // ============================================================
 
@@ -14,6 +14,11 @@ const SCHEMA = [
      until INTEGER NOT NULL, PRIMARY KEY (code, device_id))`,
   `CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS fails (ip TEXT NOT NULL, ts INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS payments (
+     id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT UNIQUE NOT NULL, plan_id TEXT NOT NULL,
+     plan_title TEXT NOT NULL, days INTEGER NOT NULL, amount INTEGER NOT NULL, contact TEXT NOT NULL,
+     track TEXT DEFAULT '', receipt TEXT DEFAULT '', ip TEXT DEFAULT '', status TEXT NOT NULL DEFAULT 'review',
+     code TEXT, note TEXT DEFAULT '', created_at INTEGER NOT NULL, decided_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS orders (
      id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT UNIQUE NOT NULL, plan_id TEXT NOT NULL,
      plan_title TEXT NOT NULL, days INTEGER NOT NULL, amount INTEGER NOT NULL, contact TEXT NOT NULL,
@@ -26,7 +31,10 @@ const DEFAULT_PLANS = [
   { id: 'm3', title: 'سه‌ماهه', days: 90, price: 119000, badge: 'محبوب‌ترین' },
   { id: 'y1', title: 'سالانه', days: 365, price: 349000, badge: 'به‌صرفه‌ترین' },
 ];
-const DEFAULT_SETTINGS = { apkUrl: '', version: '1.0.0', changelog: '', telegram: '' };
+const DEFAULT_SETTINGS = {
+  apkUrl: '', version: '1.0.0', changelog: '', telegram: '',
+  cardNumber: '', cardOwner: '', bank: '', payNote: '',
+};
 
 let ready = false;
 async function init(env) {
@@ -173,91 +181,51 @@ async function activate(req, env) {
   return json({ ok: true, until, deviceId, sig: await sign(env, deviceId, until) });
 }
 
-// ---------- پرداخت (زرین‌پال) ----------
-function zarin(env) {
-  const sandbox = String(env.ZARINPAL_SANDBOX || '') === '1';
-  const host = sandbox ? 'https://sandbox.zarinpal.com' : 'https://payment.zarinpal.com';
-  return { api: host + '/pg/v4/payment', pay: host + '/pg/StartPay/' };
+// ---------- پرداخت با رسید (کارت‌به‌کارت) ----------
+async function notifyOwner(env, text) {
+  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return;
+  try {
+    await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }),
+    });
+  } catch (_) {}
 }
 
-async function payStart(req, env, origin) {
-  if (!env.ZARINPAL_MERCHANT) {
-    return json({ ok: false, error: 'پرداخت آنلاین هنوز فعال نشده است؛ از طریق تلگرام خرید کنید' });
-  }
+async function orderNew(req, env, ctx, origin) {
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  const now = Date.now();
+  const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM payments WHERE ip = ? AND created_at > ?')
+    .bind(ip, now - 3600 * 1000).first('n');
+  if (recent >= 5) return json({ ok: false, error: 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره امتحان کنید' }, 429);
+
+  const s = await getSettings(env);
+  if (!s.cardNumber) return json({ ok: false, error: 'پرداخت با رسید هنوز فعال نشده است' });
+
   const b = (await readJson(req)) || {};
   const plans = await getPlans(env);
   const plan = plans.find((p) => p.id === b.plan);
   if (!plan) return json({ ok: false, error: 'پلن نامعتبر است' }, 400);
   const contact = String(b.contact || '').trim().slice(0, 60);
   if (contact.length < 5) return json({ ok: false, error: 'ایمیل یا شماره موبایل را وارد کنید' }, 400);
+  const track = String(b.track || '').trim().slice(0, 40);
+  const receipt = String(b.receipt || '');
+  if (receipt && (!/^data:image\/(jpeg|png|webp);base64,/.test(receipt) || receipt.length > 900000)) {
+    return json({ ok: false, error: 'تصویر رسید نامعتبر یا حجمش زیاد است' }, 400);
+  }
+  if (!receipt && track.length < 4) return json({ ok: false, error: 'تصویر رسید یا شماره پیگیری را وارد کنید' }, 400);
 
   const ref = randomRef();
-  const z = zarin(env);
-  const metadata = /^09\d{9}$/.test(contact) ? { mobile: contact } : /^\S+@\S+\.\S+$/.test(contact) ? { email: contact } : {};
-  let j = null;
-  try {
-    const r = await fetch(z.api + '/request.json', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({
-        merchant_id: env.ZARINPAL_MERCHANT,
-        amount: plan.price * 10, // ریال
-        callback_url: origin + '/pay/callback?ref=' + ref,
-        description: 'اشتراک پیامک‌یار - ' + plan.title,
-        metadata,
-      }),
-    });
-    j = await r.json();
-  } catch (_) {}
-  const authority = j && j.data && j.data.authority;
-  if (!authority || j.data.code !== 100) return json({ ok: false, error: 'خطا در اتصال به درگاه پرداخت' });
-
   await env.DB.prepare(
-    `INSERT INTO orders (ref, plan_id, plan_title, days, amount, contact, authority, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
-  ).bind(ref, plan.id, plan.title, plan.days, plan.price, contact, authority, Date.now()).run();
-  return json({ ok: true, url: z.pay + authority, ref });
-}
+    `INSERT INTO payments (ref, plan_id, plan_title, days, amount, contact, track, receipt, ip, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'review', ?)`
+  ).bind(ref, plan.id, plan.title, plan.days, plan.price, contact, track, receipt, ip, now).run();
 
-async function payCallback(url, env) {
-  const ref = url.searchParams.get('ref') || '';
-  const authority = url.searchParams.get('Authority') || '';
-  const status = url.searchParams.get('Status') || '';
-  const to = '/result.html?ref=' + encodeURIComponent(ref);
-
-  const order = await env.DB.prepare('SELECT * FROM orders WHERE ref = ?').bind(ref).first();
-  if (!order || order.status === 'paid') return redirect(to);
-
-  if (status !== 'OK' || authority !== order.authority) {
-    await env.DB.prepare("UPDATE orders SET status = 'failed' WHERE ref = ? AND status = 'pending'").bind(ref).run();
-    return redirect(to);
-  }
-
-  let j = null;
-  try {
-    const r = await fetch(zarin(env).api + '/verify.json', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({ merchant_id: env.ZARINPAL_MERCHANT, amount: order.amount * 10, authority }),
-    });
-    j = await r.json();
-  } catch (_) {}
-  const code = j && j.data && j.data.code;
-  if (code === 100 || code === 101) {
-    const fresh = await env.DB.prepare('SELECT status FROM orders WHERE ref = ?').bind(ref).first('status');
-    if (fresh !== 'paid') {
-      const lic = makeCode();
-      await env.DB.batch([
-        env.DB.prepare('INSERT INTO codes (code, days, max_devices, note, created_at) VALUES (?, ?, 1, ?, ?)')
-          .bind(lic, order.days, 'سفارش ' + order.id + ' - ' + order.contact, Date.now()),
-        env.DB.prepare("UPDATE orders SET status = 'paid', code = ?, paid_at = ? WHERE ref = ?")
-          .bind(lic, Date.now(), ref),
-      ]);
-    }
-  } else {
-    await env.DB.prepare("UPDATE orders SET status = 'failed' WHERE ref = ? AND status = 'pending'").bind(ref).run();
-  }
-  return redirect(to);
+  const text = '🧾 رسید جدید پیامک‌یار\nپلن: ' + plan.title + ' (' + plan.price + ' تومان)\nمشتری: ' + contact +
+    (track ? '\nپیگیری: ' + track : '') + '\nبررسی: ' + origin + '/admin';
+  if (ctx && ctx.waitUntil) ctx.waitUntil(notifyOwner(env, text)); else await notifyOwner(env, text);
+  return json({ ok: true, ref });
 }
 
 // ---------- API عمومی ----------
@@ -271,7 +239,8 @@ async function publicInfo(env) {
     changelog: s.changelog,
     telegram: s.telegram,
     hasApk: !!s.apkUrl,
-    shop: !!env.ZARINPAL_MERCHANT,
+    pay: !!s.cardNumber,
+    card: s.cardNumber ? { number: s.cardNumber, owner: s.cardOwner, bank: s.bank, note: s.payNote } : null,
     downloads,
   };
 }
@@ -286,20 +255,48 @@ async function admin(req, env, path) {
       codes: await n('SELECT COUNT(*) AS n FROM codes'),
       activations: await n('SELECT COUNT(*) AS n FROM activations'),
       activeNow: await env.DB.prepare('SELECT COUNT(*) AS n FROM activations WHERE until > ?').bind(now).first('n'),
-      paidOrders: await n("SELECT COUNT(*) AS n FROM orders WHERE status = 'paid'"),
-      revenue: await n("SELECT COALESCE(SUM(amount), 0) AS n FROM orders WHERE status = 'paid'"),
-      pendingOrders: await n("SELECT COUNT(*) AS n FROM orders WHERE status = 'pending'"),
+      approved: await n("SELECT COUNT(*) AS n FROM payments WHERE status = 'approved'"),
+      revenue: await n("SELECT COALESCE(SUM(amount), 0) AS n FROM payments WHERE status = 'approved'"),
+      pending: await n("SELECT COUNT(*) AS n FROM payments WHERE status = 'review'"),
       downloads: parseInt((await kvGet(env, 'downloads')) || '0') || 0,
-      shop: !!env.ZARINPAL_MERCHANT,
-      sandbox: String(env.ZARINPAL_SANDBOX || '') === '1',
     });
   }
 
-  if (path === '/api/admin/orders' && req.method === 'GET') {
+  if (path === '/api/admin/payments' && req.method === 'GET') {
     const r = await env.DB.prepare(
-      'SELECT id, ref, plan_title, amount, contact, status, code, created_at, paid_at FROM orders ORDER BY id DESC LIMIT 300'
+      `SELECT id, plan_title, days, amount, contact, track, status, code, note, created_at, decided_at,
+              (CASE WHEN receipt != '' THEN 1 ELSE 0 END) AS has_receipt
+       FROM payments ORDER BY (status = 'review') DESC, id DESC LIMIT 300`
     ).all();
-    return json({ ok: true, orders: r.results });
+    return json({ ok: true, payments: r.results });
+  }
+
+  if (path === '/api/admin/receipt' && req.method === 'GET') {
+    const id = parseInt(new URL(req.url).searchParams.get('id') || '0');
+    const data = await env.DB.prepare('SELECT receipt FROM payments WHERE id = ?').bind(id).first('receipt');
+    return json({ ok: !!data, data: data || '' });
+  }
+
+  if (path === '/api/admin/pay/approve' && req.method === 'POST') {
+    const b = (await readJson(req)) || {};
+    const p = await env.DB.prepare('SELECT id, days, contact, status FROM payments WHERE id = ?').bind(parseInt(b.id) || 0).first();
+    if (!p) return json({ ok: false, error: 'پیدا نشد' }, 404);
+    if (p.status === 'approved') return json({ ok: false, error: 'قبلاً تأیید شده است' });
+    const lic = makeCode();
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO codes (code, days, max_devices, note, created_at) VALUES (?, ?, 1, ?, ?)')
+        .bind(lic, p.days, 'رسید ' + p.id + ' - ' + p.contact, Date.now()),
+      env.DB.prepare("UPDATE payments SET status = 'approved', code = ?, note = '', decided_at = ? WHERE id = ?")
+        .bind(lic, Date.now(), p.id),
+    ]);
+    return json({ ok: true, code: lic });
+  }
+
+  if (path === '/api/admin/pay/reject' && req.method === 'POST') {
+    const b = (await readJson(req)) || {};
+    await env.DB.prepare("UPDATE payments SET status = 'rejected', note = ?, decided_at = ? WHERE id = ? AND status = 'review'")
+      .bind(String(b.note || 'رسید تأیید نشد').slice(0, 200), Date.now(), parseInt(b.id) || 0).run();
+    return json({ ok: true });
   }
 
   if (path === '/api/admin/settings' && req.method === 'GET') {
@@ -316,6 +313,10 @@ async function admin(req, env, path) {
       version: String(b.version ?? cur.version).trim().slice(0, 20),
       changelog: String(b.changelog ?? cur.changelog).slice(0, 500),
       telegram: String(b.telegram ?? cur.telegram).trim().replace(/^@/, '').slice(0, 40),
+      cardNumber: String(b.cardNumber ?? cur.cardNumber).replace(/[^0-9 \-]/g, '').trim().slice(0, 24),
+      cardOwner: String(b.cardOwner ?? cur.cardOwner).trim().slice(0, 40),
+      bank: String(b.bank ?? cur.bank).trim().slice(0, 30),
+      payNote: String(b.payNote ?? cur.payNote).trim().slice(0, 200),
     };
     await kvSet(env, 'settings', JSON.stringify(s));
     if (Array.isArray(b.plans)) {
@@ -377,7 +378,7 @@ async function admin(req, env, path) {
 
 // ---------- مسیریابی ----------
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     try {
       await init(env);
       const url = new URL(req.url);
@@ -392,16 +393,15 @@ export default {
 
       if (path === '/api/license/activate' && req.method === 'POST') return await activate(req, env);
 
-      if (path === '/api/pay/start' && req.method === 'POST') return await payStart(req, env, url.origin);
-      if (path === '/pay/callback' && req.method === 'GET') return await payCallback(url, env);
+      if (path === '/api/order/new' && req.method === 'POST') return await orderNew(req, env, ctx, url.origin);
 
       if (path === '/api/order' && req.method === 'GET') {
         const ref = url.searchParams.get('ref') || '';
         const o = await env.DB.prepare(
-          'SELECT plan_title, days, amount, status, code, paid_at FROM orders WHERE ref = ?'
+          'SELECT plan_title, days, amount, status, code, note FROM payments WHERE ref = ?'
         ).bind(ref).first();
         if (!o) return json({ ok: false, error: 'سفارش پیدا نشد' }, 404);
-        return json({ ok: true, order: { ...o, code: o.status === 'paid' ? o.code : null } });
+        return json({ ok: true, order: { ...o, code: o.status === 'approved' ? o.code : null } });
       }
 
       if (path === '/dl' && req.method === 'GET') {
